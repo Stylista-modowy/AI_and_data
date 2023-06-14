@@ -1,112 +1,85 @@
-import os
-import csv
-from google.cloud import storage
+import mysql.connector
 import pandas as pd
+import os
+def upload_data_to_sql(item_id, color, category, style, season, subCategory, gender, item_image):
+    connection = mysql.connector.connect(
+        host='stylistadb.mysql.database.azure.com',
+        port=3306,
+        user='stylista',
+        password='modowy1!',
+        database='stylista'
+    )
 
-def create_folder(bucket_name, folder_name, wagescsv_folder_name, useridclothes_folder_name, clothescsv_folder_name):
-    # Path to your service account key file
-    key_file_path = 'endless-codex-386021-d774fb36484c.json'
+    cursor = connection.cursor()
 
-    # Create a client using the service account key file
-    client = storage.Client.from_service_account_json(key_file_path)
+    sql = "INSERT INTO wardrobe_test (item_id, color, category, style, season, subCategory, gender, item_image) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
+    values = (item_id, color, category, style, season, subCategory, gender, item_image)
 
-    # Get the bucket
-    bucket = client.bucket(bucket_name)
+    cursor.execute(sql, values)
 
-    # Create the user folder if it doesn't exist
-    user_folder = bucket.blob(folder_name + '/')
-    user_folder.upload_from_string('', content_type='application/x-www-form-urlencoded;charset=UTF-8')
+    connection.commit()
+    connection.close()
+def delete_data_from_sql(item_id):
+    connection = mysql.connector.connect(
+        host='stylistadb.mysql.database.azure.com',
+        port=3306,
+        user='stylista',
+        password='modowy1!',
+        database='stylista'
+    )
 
-    # Create the "wagescsv" folder inside the user folder
-    wagescsv_folder = bucket.blob(folder_name + '/' + wagescsv_folder_name + '/')
-    wagescsv_folder.upload_from_string('', content_type='application/x-www-form-urlencoded;charset=UTF-8')
+    cursor = connection.cursor()
 
-    # Create the "useridclothes" folder inside the user folder
-    useridclothes_folder = bucket.blob(folder_name + '/' + useridclothes_folder_name + '/')
-    useridclothes_folder.upload_from_string('', content_type='application/x-www-form-urlencoded;charset=UTF-8')
+    sql = "DELETE FROM wardrobe_test WHERE item_id = %s"
+    value = (item_id,)
 
-    # Create the "clothescsv" folder inside the user folder
-    clothescsv_folder = bucket.blob(folder_name + '/' + clothescsv_folder_name + '/')
-    clothescsv_folder.upload_from_string('', content_type='application/x-www-form-urlencoded;charset=UTF-8')
+    cursor.execute(sql, value)
 
-    print(f'Folders created successfully for user "{folder_name}".')
-
-def add_clothing_image(id, color, type, style, season, category, gender, image_path, image_folder_path, csv_folder_path):
-    bucket_name = 'aiprojectusers'
-    user_folder_name = 'Mateusz'
-
-    os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'endless-codex-386021-d774fb36484c.json'
-
-    storage_client = storage.Client()
-    bucket = storage_client.bucket(bucket_name)
-
-    image_blob = bucket.blob(f'{user_folder_name}/{image_folder_path}/{id}.jpg')
-    image_blob.upload_from_filename(image_path)
-
-    data = {
-        'id': id.strip("[]"),
-        'Color': color.strip("[]"),
-        'Type': type.strip("[]"),
-        'Style': style.strip("[]"),
-        'Season': season.strip("[]"),
-        'subCategory': category.strip("[]"),
-        'Gender': gender.strip("[]"),
-        'weight': 0
-    }
-
-    csv_folder = os.path.join(user_folder_name, csv_folder_path)
-    os.makedirs(csv_folder, exist_ok=True)
-
-    csv_file_path = os.path.join(csv_folder, f'{user_folder_name}clothes.csv')
-
-    with open(csv_file_path, 'a', newline='') as csvfile:
-        writer = csv.DictWriter(csvfile, fieldnames=data.keys())
-
-        if os.path.getsize(csv_file_path) == 0:
-            writer.writeheader()
-
-        # Write the data row
-        writer.writerow(data)
-
-    # Upload the CSV file to the specified CSV folder
-    csv_blob = bucket.blob(f'{user_folder_name}/{csv_folder_path}/{user_folder_name}clothes.csv')
-    csv_blob.upload_from_filename(csv_file_path)
-
-    print(f'Successfully added clothing image {id}.jpg to folder "{user_folder_name}/{image_folder_path}"')
-    print(f'Successfully added data to "{user_folder_name}/{csv_folder_path}/{user_folder_name}clothes.csv"')
+    connection.commit()
+    connection.close()
 
 
-##############
+
 def generate_combinations(df):
-    topwear_ids = df[df['subCategory'] == 'Topwear']['id'].unique()
-    bottomwear_ids = df[df['subCategory'] == 'Bottomwear']['id'].unique()
-    shoes_ids = df[df['subCategory'] == 'Shoes']['id'].unique()
+    topwear_ids = df[df['subCategory'] == 'Topwear']['item_id'].unique()
+    bottomwear_ids = df[df['subCategory'] == 'Bottomwear']['item_id'].unique()
+    shoes_ids = df[df['subCategory'] == 'Shoes']['item_id'].unique()
 
     combinations = []
 
     for topwear_id in topwear_ids:
-        topwear_gender = df.loc[df['id'] == topwear_id, 'Gender'].iloc[0]
-        topwear_style = df.loc[df['id'] == topwear_id, 'Style'].iloc[0]
-        topwear_season = df.loc[df['id'] == topwear_id, 'Season'].iloc[0]
+        topwear_gender = df.loc[df['item_id'] == topwear_id, 'gender'].iloc[0]
+        topwear_style = df.loc[df['item_id'] == topwear_id, 'style'].iloc[0]
+        topwear_season = df.loc[df['item_id'] == topwear_id, 'season'].iloc[0]
 
         for bottomwear_id in bottomwear_ids:
-            bottomwear_gender = df.loc[df['id'] == bottomwear_id, 'Gender'].iloc[0]
-            bottomwear_style = df.loc[df['id'] == bottomwear_id, 'Style'].iloc[0]
-            bottomwear_season = df.loc[df['id'] == bottomwear_id, 'Season'].iloc[0]
+            bottomwear_gender = df.loc[df['item_id'] == bottomwear_id, 'gender'].iloc[0]
+            bottomwear_style = df.loc[df['item_id'] == bottomwear_id, 'style'].iloc[0]
+            bottomwear_season = df.loc[df['item_id'] == bottomwear_id, 'season'].iloc[0]
 
             if (bottomwear_gender == topwear_gender) and (bottomwear_style == topwear_style) and (bottomwear_season == topwear_season):
                 for shoes_id in shoes_ids:
-                    shoes_gender = df.loc[df['id'] == shoes_id, 'Gender'].iloc[0]
-                    shoes_style = df.loc[df['id'] == shoes_id, 'Style'].iloc[0]
-                    shoes_season = df.loc[df['id'] == shoes_id, 'Season'].iloc[0]
+                    shoes_gender = df.loc[df['item_id'] == shoes_id, 'gender'].iloc[0]
+                    shoes_style = df.loc[df['item_id'] == shoes_id, 'style'].iloc[0]
+                    shoes_season = df.loc[df['item_id'] == shoes_id, 'season'].iloc[0]
 
                     if (shoes_gender == topwear_gender) and (shoes_style == topwear_style) and (shoes_season == topwear_season):
                         combinations.append([topwear_id, bottomwear_id, shoes_id, topwear_gender, topwear_style, topwear_season, 0])
 
     return combinations
 
-def create_combinations_csv(input_csv_path, output_csv_path):
-    df = pd.read_csv(input_csv_path)
+def generate_and_save_combinations(host, port, username, password, database, table_name, output_csv_path):
+    connection = mysql.connector.connect(
+        host=host,
+        port=port,
+        user=username,
+        password=password,
+        database=database
+    )
+
+    query = f"SELECT * FROM {table_name}"
+    df = pd.read_sql(query, connection)
+
     combinations = generate_combinations(df)
 
     columns = ['topwear_id', 'bottomwear_id', 'shoes_id', 'gender', 'style', 'season', 'weight']
@@ -115,47 +88,93 @@ def create_combinations_csv(input_csv_path, output_csv_path):
     data.to_csv(output_csv_path, index=False)
     print(f'Combinations CSV file saved to {output_csv_path}')
 
-def upload_csv_to_gcs(bucket_name, folder_name, csv_file_path):
-    # Set your Google Cloud Storage bucket name
-    bucket_name = 'aiprojectusers'
+    connection.close()
+def load_combinations_from_csv_to_sql(host, port, username, password, database, table_name, combinations_csv_path):
+    connection = mysql.connector.connect(
+        host=host,
+        port=port,
+        user=username,
+        password=password,
+        database=database
+    )
 
-    os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'endless-codex-386021-d774fb36484c.json'
+    create_table_query = f"""
+    CREATE TABLE IF NOT EXISTS {table_name} (
+        topwear_id VARCHAR(255),
+        bottomwear_id VARCHAR(255),
+        shoes_id VARCHAR(255),
+        gender VARCHAR(255),
+        style VARCHAR(255),
+        season VARCHAR(255),
+        weight INT
+    )
+    """
+    cursor = connection.cursor()
+    cursor.execute(create_table_query)
+    connection.commit()
 
-    storage_client = storage.Client()
-    bucket = storage_client.bucket(bucket_name)
+    combinations_df = pd.read_csv(combinations_csv_path)
 
-    blob = bucket.blob(f'{folder_name}/{csv_file_path}')
-    blob.upload_from_filename(csv_file_path)
+    insert_query = f"INSERT INTO {table_name} (topwear_id, bottomwear_id, shoes_id, gender, style, season, weight) VALUES (%s, %s, %s, %s, %s, %s, %s)"
+    cursor = connection.cursor()
+    for _, row in combinations_df.iterrows():
+        values = (row['topwear_id'], row['bottomwear_id'], row['shoes_id'], row['gender'], row['style'], row['season'], row['weight'])
+        cursor.execute(insert_query, values)
+    connection.commit()
 
-    print(f'CSV file "{csv_file_path}" uploaded to folder "{folder_name}" in bucket "{bucket_name}"')
+    cursor.close()
+    connection.close()
 
-if __name__ == '__main__':
-    user_name = 'Mateusz'
-    bucket_name = 'aiprojectusers' #zasobnik
-    folder_name = user_name    #folder dla uzytkownika
-    wagescsv_folder_name = user_name+ 'wagescsv'  #folder dla wag
-    useridclothes_folder_name = user_name+ 'useridclothes'  #folder dla obrazkow ubran
-    clothescsv_folder_name = user_name+ 'clothescsv'  #csv ubran
+def update_weight_in_sql(host, port, username, password, database, table_name, row_id, new_weight):
+    connection = mysql.connector.connect(
+        host=host,
+        port=port,
+        user=username,
+        password=password,
+        database=database
+    )
 
-    create_folder(bucket_name, folder_name, wagescsv_folder_name, useridclothes_folder_name,clothescsv_folder_name)
-    # dodawania ubrania do folderu oraz specyfikajci co csv
-    add_clothing_image('1529', 'Red', 'T-Shirt', 'Casual', 'Summer', 'Topwear', 'Male', '1529.jpg', useridclothes_folder_name, clothescsv_folder_name)
-    #  1529  1531   1533    1534    # shoes 1541 1542 1543   #bottomwear 1567 1569   1572
-    add_clothing_image('1531', 'Grey', 'T-Shirt', 'Casual', 'Summer', 'Topwear', 'Male', '1531.jpg',useridclothes_folder_name, clothescsv_folder_name)
-    add_clothing_image('1533', 'Red', 'T-Shirt', 'Casual', 'Summer', 'Topwear', 'Male', '1533.jpg',useridclothes_folder_name, clothescsv_folder_name)
-    add_clothing_image('1534', 'Black', 'T-Shirt', 'Casual', 'Summer', 'Topwear', 'Male', '1534.jpg',useridclothes_folder_name, clothescsv_folder_name)
-    add_clothing_image('8779', 'Blue', 'T-Shirt', 'Formal', 'Summer', 'Topwear', 'Male', '8779.jpg',useridclothes_folder_name, clothescsv_folder_name)
-    ####
-    add_clothing_image('1541', 'Red', 'Shoes', 'Casual', 'Summer', 'Shoes', 'Male', '1541.jpg', useridclothes_folder_name, clothescsv_folder_name)
-    add_clothing_image('1543', 'Black', 'Shoes', 'Casual', 'Summer', 'Shoes', 'Male', '1529.jpg',useridclothes_folder_name, clothescsv_folder_name)
-    ###
-    add_clothing_image('1567', 'Red', 'Trousers', 'Casual', 'Summer', 'Bottomwear', 'Male', '1567.jpg',useridclothes_folder_name, clothescsv_folder_name)
-    add_clothing_image('1569', 'Red', 'Trousers', 'Casual', 'Summer', 'Bottomwear', 'Male', '1569.jpg',useridclothes_folder_name, clothescsv_folder_name)
-    add_clothing_image('1572', 'Red', 'Trousers', 'Casual', 'Summer', 'Bottomwear', 'Male', '1572.jpg',useridclothes_folder_name, clothescsv_folder_name)
+    update_query = f"UPDATE {table_name} SET weight = %s WHERE idwages = %s"
+    cursor = connection.cursor()
+    cursor.execute(update_query, (new_weight, row_id))
+    connection.commit()
 
-    input_csv_path = 'Mateusz/Mateuszclothescsv/Mateuszclothes.csv'
-    output_csv_path = 'output.csv'
-    create_combinations_csv(input_csv_path, output_csv_path)
-    csv_file_path = 'output.csv'
-    upload_csv_to_gcs(bucket_name, 'Mateusz/Mateuszwagescsv', csv_file_path)
+    cursor.close()
+    connection.close()
 
+item_id = '1529'
+color = 'Red'
+category = 'T-shirt'
+style = 'Casual'
+season = 'Summer'
+subCategory = 'Topwear'
+gender = 'Male'
+item_image = '1529.jpg'
+
+#upload_data_to_sql(item_id, color, category, style, season, subCategory, gender, item_image)
+#delete_data_from_sql(item_id)
+"""
+upload_data_to_sql('1529', 'Red', 'T-Shirt', 'Casual', 'Summer', 'Topwear', 'Male', '1529.jpg')
+upload_data_to_sql('1531', 'Grey', 'T-Shirt', 'Casual', 'Summer', 'Topwear', 'Male', '1531.jpg')
+upload_data_to_sql('1533', 'Red', 'T-Shirt', 'Casual', 'Summer', 'Topwear', 'Male', '1533.jpg')
+upload_data_to_sql('1534', 'Black', 'T-Shirt', 'Casual', 'Summer', 'Topwear', 'Male', '1534.jpg')
+upload_data_to_sql('8779', 'Blue', 'T-Shirt', 'Formal', 'Summer', 'Topwear', 'Male', '8779.jpg')
+upload_data_to_sql('1541', 'Red', 'Shoes', 'Casual', 'Summer', 'Shoes', 'Male', '1541.jpg')
+upload_data_to_sql('1543', 'Black', 'Shoes', 'Casual', 'Summer', 'Shoes', 'Male', '1543.jpg')
+upload_data_to_sql('1567', 'Red', 'Trousers', 'Casual', 'Summer', 'Bottomwear', 'Male', '1567.jpg')
+upload_data_to_sql('1569', 'Red', 'Trousers', 'Casual', 'Summer', 'Bottomwear', 'Male', '1569.jpg')
+upload_data_to_sql('1572', 'Red', 'Trousers', 'Casual', 'Summer', 'Bottomwear', 'Male', '1572.jpg')
+"""
+# Example usage
+host = 'stylistadb.mysql.database.azure.com'
+port = 3306
+username = 'stylista'
+password = 'modowy1!'
+database = 'stylista'
+table_name = 'wardrobe_test'
+output_csv_path = 'combinations.csv'
+#generate_and_save_combinations('stylistadb.mysql.database.azure.com', 3306, 'stylista', 'modowy1!', 'stylista', 'combinations.csv')
+#generate_and_save_combinations(host, port, username, password, database, "wardrobe_test", "wages.csv")
+#generate_and_save_combinations(host, port, username, password, database, table_name, output_csv_path)
+#load_combinations_from_csv_to_sql(host, port, username, password, database, "wages", output_csv_path)
+#update_weight_in_sql(host, port, username, password, database, "wages", "1", 1)
