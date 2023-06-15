@@ -1,6 +1,7 @@
 import mysql.connector
 import pandas as pd
 import os
+import random
 def upload_data_to_sql(item_id, color, category, style, season, subCategory, gender, item_image):
     connection = mysql.connector.connect(
         host='stylistadb.mysql.database.azure.com',
@@ -141,16 +142,63 @@ def update_weight_in_sql(host, port, username, password, database, table_name, r
 
     cursor.close()
     connection.close()
+def calculate_wages_sum(host, port, username, password, database, table_name):
+    # Connect to MySQL database
+    connection = mysql.connector.connect(
+        host=host,
+        port=port,
+        user=username,
+        password=password,
+        database=database
+    )
 
-item_id = '1529'
-color = 'Red'
-category = 'T-shirt'
-style = 'Casual'
-season = 'Summer'
-subCategory = 'Topwear'
-gender = 'Male'
-item_image = '1529.jpg'
+    # Calculate the sum of wages
+    sum_query = f"SELECT SUM(weight) FROM {table_name}"
+    cursor = connection.cursor()
+    cursor.execute(sum_query)
+    sum_result = cursor.fetchone()[0]
 
+    # Close the database connection
+    cursor.close()
+    connection.close()
+
+    return sum_result
+def draw_clothes_set(host, port, username, password, database, table_name):
+    # Connect to MySQL database
+    connection = mysql.connector.connect(
+        host=host,
+        port=port,
+        user=username,
+        password=password,
+        database=database
+    )
+
+    # Fetch all rows from the table
+    fetch_query = f"SELECT id, weight FROM {table_name}"
+    cursor = connection.cursor()
+    cursor.execute(fetch_query)
+    clothes_data = cursor.fetchall()
+
+    # Calculate the sum of weights
+    total_weight = sum(weight for _, weight in clothes_data)
+
+    # Draw a random number between 0 and total_weight
+    draw = random.uniform(0, total_weight)
+
+    # Find the set of clothes based on the drawn number
+    cumulative_weight = 0
+    drawn_id = None
+    for id, weight in clothes_data:
+        cumulative_weight += weight
+        if draw <= cumulative_weight:
+            drawn_id = id
+            break
+
+    # Close the database connection
+    cursor.close()
+    connection.close()
+
+    return drawn_id
 #upload_data_to_sql(item_id, color, category, style, season, subCategory, gender, item_image)
 #delete_data_from_sql(item_id)
 """
@@ -178,3 +226,5 @@ output_csv_path = 'combinations.csv'
 #generate_and_save_combinations(host, port, username, password, database, table_name, output_csv_path)
 #load_combinations_from_csv_to_sql(host, port, username, password, database, "wages", output_csv_path)
 #update_weight_in_sql(host, port, username, password, database, "wages", "1", 1)
+wages_sum = calculate_wages_sum(host, port, username, password, database, "wages")
+print(f"The sum of wages is: {wages_sum}")
