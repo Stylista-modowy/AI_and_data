@@ -126,6 +126,8 @@ def load_combinations_from_csv_to_sql(host, port, username, password, database, 
     cursor.close()
     connection.close()
 
+
+
 def update_weight_in_sql(host, port, username, password, database, table_name, row_id, new_weight):
     connection = mysql.connector.connect(
         host=host,
@@ -199,6 +201,49 @@ def draw_clothes_set(host, port, username, password, database, table_name):
     connection.close()
 
     return drawn_id
+
+
+def draw_combination_id(sum_of_wages, host, port, username, password, database):
+    connection = mysql.connector.connect(
+        host=host,
+        port=port,
+        user=username,
+        password=password,
+        database=database
+    )
+
+    cursor = connection.cursor()
+
+    # Retrieve combinations and their respective weights
+    select_query = "SELECT idwages, weight FROM wages"
+    cursor.execute(select_query)
+    combinations = cursor.fetchall()
+
+    # Calculate the cumulative weights
+    cumulative_weights = []
+    total_weight = sum(combination[1] for combination in combinations)
+    cumulative_weight = 0
+    for combination in combinations:
+        cumulative_weight += combination[1]
+        cumulative_weights.append(cumulative_weight / total_weight)
+
+    # Generate a random number between 0 and 1
+    random_number = random.random()
+
+    # Find the corresponding combination based on the random number and cumulative weights
+    drawed_idwages = None
+    for combination, cumulative_weight in zip(combinations, cumulative_weights):
+        if random_number <= cumulative_weight:
+            drawed_idwages = combination[0]
+            break
+
+    cursor.close()
+    connection.close()
+
+    return drawed_idwages
+
+
+
 #upload_data_to_sql(item_id, color, category, style, season, subCategory, gender, item_image)
 #delete_data_from_sql(item_id)
 """
@@ -213,6 +258,8 @@ upload_data_to_sql('1567', 'Red', 'Trousers', 'Casual', 'Summer', 'Bottomwear', 
 upload_data_to_sql('1569', 'Red', 'Trousers', 'Casual', 'Summer', 'Bottomwear', 'Male', '1569.jpg')
 upload_data_to_sql('1572', 'Red', 'Trousers', 'Casual', 'Summer', 'Bottomwear', 'Male', '1572.jpg')
 """
+#SELECT * FROM table_name;
+
 # Example usage
 host = 'stylistadb.mysql.database.azure.com'
 port = 3306
@@ -222,9 +269,12 @@ database = 'stylista'
 table_name = 'wardrobe_test'
 output_csv_path = 'combinations.csv'
 #generate_and_save_combinations('stylistadb.mysql.database.azure.com', 3306, 'stylista', 'modowy1!', 'stylista', 'combinations.csv')
-#generate_and_save_combinations(host, port, username, password, database, "wardrobe_test", "wages.csv")
+#generate_and_save_combinations(host, port, username, password, database, "wardrobe_test", output_csv_path)
 #generate_and_save_combinations(host, port, username, password, database, table_name, output_csv_path)
 #load_combinations_from_csv_to_sql(host, port, username, password, database, "wages", output_csv_path)
 #update_weight_in_sql(host, port, username, password, database, "wages", "1", 1)
+#update_weight_in_sql(host, port, username, password, database, "wages", "1", 20)
 wages_sum = calculate_wages_sum(host, port, username, password, database, "wages")
 print(f"The sum of wages is: {wages_sum}")
+drawn_idwages = draw_combination_id(wages_sum, host, port, username, password, database)
+print(f"The sum of wages is: {drawn_idwages}")
