@@ -14,13 +14,20 @@ def upload_data_to_sql(item_id, color, category, style, season, subCategory, gen
 
     cursor = connection.cursor()
 
+    image_path = os.path.join(os.getcwd(), item_image)
+
+    with open(image_path, 'rb') as file:
+        image_data = file.read()
+
     sql = "INSERT INTO wardrobe_test (item_id, color, category, style, season, subCategory, gender, item_image) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
-    values = (item_id, color, category, style, season, subCategory, gender, item_image)
+    values = (item_id, color, category, style, season, subCategory, gender, image_data)
 
     cursor.execute(sql, values)
 
     connection.commit()
     connection.close()
+
+
 def delete_data_from_sql(item_id):
     connection = mysql.connector.connect(
         host='stylistadb.mysql.database.azure.com',
@@ -251,7 +258,7 @@ upload_data_to_sql('1572', 'Red', 'Trousers', 'Casual', 'Summer', 'Bottomwear', 
 upload_data_to_sql('8960', 'Black', 'Shoes', 'Formal', 'Summer', 'Shoes', 'Male', '8960.jpg')
 upload_data_to_sql('8951', 'Black', 'Trousers', 'Formal', 'Summer', 'Bottomwear', 'Male', '8951.jpg')
 """
-#upload_data_to_sql('1616', 'White', 'T-Shirt', 'Casual', 'Summer', 'Topwear', 'Male', '1616.jpg')
+upload_data_to_sql('1616', 'White', 'T-Shirt', 'Casual', 'Summer', 'Topwear', 'Male', '1616.jpg')
 #SELECT * FROM table_name;
 
 # Example usage
